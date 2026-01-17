@@ -12,12 +12,14 @@ curl -sSL https://raw.githubusercontent.com/adachi-koichi/ai-tools/main/skills/i
 ### インストール先の指定
 
 ```bash
-# ホームディレクトリにインストール（~/.claude, ~/.codex, ~/.cursor）
+# ホームディレクトリにインストール（存在するディレクトリのみ: ~/.claude, ~/.codex, ~/.cursor）
 curl -sSL https://raw.githubusercontent.com/adachi-koichi/ai-tools/main/skills/install.sh | bash -s <skill_name> ~
 
-# カレントディレクトリにインストール（./claude, ./codex, ./cursor）
+# カレントディレクトリにインストール（存在するディレクトリのみ: ./.claude, ./.codex, ./.cursor）
 curl -sSL https://raw.githubusercontent.com/adachi-koichi/ai-tools/main/skills/install.sh | bash -s <skill_name> .
 ```
+
+**注意**: `~` や `.` を指定した場合、指定したパスの下に存在するディレクトリ（`.claude`, `.codex`, `.cursor`）のみにインストールされます。存在しないディレクトリにはインストールされません。
 
 ### 使用例
 
