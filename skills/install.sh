@@ -1,6 +1,7 @@
 #!/bin/bash
-# Miro Skill Installation Script
-# Usage: curl -sSL https://raw.githubusercontent.com/adachi-koichi/ai-tools/main/skills/miro/install.sh | bash
+# Generic Skill Installation Script
+# Usage: curl -sSL https://raw.githubusercontent.com/adachi-koichi/ai-tools/main/skills/install.sh | bash -s <skill_name>
+# Example: curl -sSL https://raw.githubusercontent.com/adachi-koichi/ai-tools/main/skills/install.sh | bash -s miro
 
 set -euo pipefail
 
@@ -13,8 +14,19 @@ NC='\033[0m' # No Color
 # Configuration
 REPO="adachi-koichi/ai-tools"
 BRANCH="main"
-SKILL_DIR="skills/miro"
-GITHUB_RAW_BASE="https://raw.githubusercontent.com/${REPO}/${BRANCH}/${SKILL_DIR}"
+GITHUB_RAW_BASE="https://raw.githubusercontent.com/${REPO}/${BRANCH}"
+
+# Get skill name from argument
+SKILL_NAME="${1:-}"
+if [ -z "${SKILL_NAME}" ]; then
+  echo -e "${RED}[ERROR]${NC} Skill name is required"
+  echo "Usage: curl -sSL https://raw.githubusercontent.com/${REPO}/${BRANCH}/skills/install.sh | bash -s <skill_name>"
+  echo "Example: curl -sSL https://raw.githubusercontent.com/${REPO}/${BRANCH}/skills/install.sh | bash -s miro"
+  exit 1
+fi
+
+SKILL_DIR="skills/${SKILL_NAME}"
+GITHUB_RAW_SKILL_BASE="${GITHUB_RAW_BASE}/${SKILL_DIR}"
 GITHUB_API_BASE="https://api.github.com/repos/${REPO}/contents/${SKILL_DIR}"
 
 # Detect installation directories in current folder
@@ -25,17 +37,17 @@ detect_install_dirs() {
   
   # Check for .cursor directory in current folder
   if [ -d "${current_dir}/.cursor" ]; then
-    install_dirs+=("${current_dir}/.cursor/skills/miro")
+    install_dirs+=("${current_dir}/.cursor/skills/${SKILL_NAME}")
   fi
   
   # Check for .codex directory in current folder
   if [ -d "${current_dir}/.codex" ]; then
-    install_dirs+=("${current_dir}/.codex/skills/miro")
+    install_dirs+=("${current_dir}/.codex/skills/${SKILL_NAME}")
   fi
   
   # Check for .claude directory in current folder
   if [ -d "${current_dir}/.claude" ]; then
-    install_dirs+=("${current_dir}/.claude/skills/miro")
+    install_dirs+=("${current_dir}/.claude/skills/${SKILL_NAME}")
   fi
   
   # Return newline-separated list
@@ -78,7 +90,7 @@ check_dependencies() {
 download_file() {
   local filename="$1"
   local target_path="$2"
-  local url="${GITHUB_RAW_BASE}/${filename}"
+  local url="${GITHUB_RAW_SKILL_BASE}/${filename}"
   
   print_info "Downloading: ${filename}"
   
@@ -108,8 +120,14 @@ download_with_api() {
     return 1
   fi
   
+  # Check if the skill directory exists
+  if echo "$response" | grep -q '"message":"Not Found"'; then
+    print_error "Skill '${SKILL_NAME}' not found in repository"
+    return 1
+  fi
+  
   # Use array to collect failed files (since while loop runs in subshell)
-  local temp_failed="/tmp/miro_install_failed_$$"
+  local temp_failed="/tmp/${SKILL_NAME}_install_failed_$$"
   > "$temp_failed"
   
   echo "$response" | jq -r '.[] | select(.type == "file") | .name' | while read -r filename; do
@@ -136,21 +154,45 @@ download_with_api() {
 }
 
 # Download files without jq (fallback method)
+# This method tries to download common files
 download_without_jq() {
   local install_dir="$1"
-  local files=("SKILL.md" "miro.sh" ".gitignore" ".env.example")
+  local common_files=("SKILL.md")
   local failed_files=()
+  local downloaded_count=0
   
-  for filename in "${files[@]}"; do
+  # Try to download common files
+  for filename in "${common_files[@]}"; do
     local target_path="${install_dir}/${filename}"
-    if ! download_file "${filename}" "${target_path}"; then
+    if download_file "${filename}" "${target_path}"; then
+      downloaded_count=$((downloaded_count + 1))
+    else
       failed_files+=("${filename}")
     fi
   done
   
-  if [ ${#failed_files[@]} -gt 0 ]; then
-    print_error "Failed to download some files: ${failed_files[*]}"
+  # Try to download skill-specific script file
+  local script_file="${SKILL_NAME}.sh"
+  if download_file "${script_file}" "${install_dir}/${script_file}"; then
+    downloaded_count=$((downloaded_count + 1))
+  fi
+  
+  # Try other common files
+  for filename in ".gitignore" ".env.example"; do
+    local target_path="${install_dir}/${filename}"
+    if download_file "${filename}" "${target_path}" 2>/dev/null; then
+      downloaded_count=$((downloaded_count + 1))
+    fi
+  done
+  
+  if [ $downloaded_count -eq 0 ]; then
+    print_error "Failed to download any files. Please install jq for better file detection."
     return 1
+  fi
+  
+  if [ ${#failed_files[@]} -gt 0 ]; then
+    print_warn "Some files may not have been downloaded: ${failed_files[*]}"
+    print_warn "Install jq for complete file detection."
   fi
   
   return 0
@@ -187,8 +229,9 @@ install_to_directory() {
 
 # Main installation function
 main() {
-  print_info "Miro Skill Installation Script"
+  print_info "${SKILL_NAME} Skill Installation Script"
   print_info "================================="
+  print_info "Skill name: ${SKILL_NAME}"
   print_info "Current directory: ${PWD}"
   
   # Check dependencies
@@ -207,8 +250,8 @@ main() {
   # If no directories found, use fallback
   if [ ${#install_dirs_array[@]} -eq 0 ]; then
     print_warn "No .claude, .codex, or .cursor directories found in current folder"
-    print_info "Creating ./skills/miro as fallback..."
-    install_dirs_array=("./skills/miro")
+    print_info "Creating ./skills/${SKILL_NAME} as fallback..."
+    install_dirs_array=("./skills/${SKILL_NAME}")
   fi
   
   # Count installation directories
@@ -243,16 +286,8 @@ main() {
     fi
   done
   print_info ""
-  print_info "Next steps:"
-  print_info "1. Set up your Miro access token:"
-  print_info "   export MIRO_ACCESS_TOKEN='your_access_token_here'"
-  print_info "2. Or create .env.local file in the installation directory"
-  print_info "3. Use the miro.sh script:"
-  for install_dir in "${install_dirs_array[@]}"; do
-    if [ -n "$install_dir" ] && [ -d "$install_dir" ]; then
-      print_info "   ${install_dir}/miro.sh list-boards"
-    fi
-  done
+  print_info "Installation completed!"
+  print_info "Check SKILL.md in the installation directory for usage instructions."
 }
 
 # Run main function
