@@ -61,16 +61,22 @@ detect_install_dirs() {
   # Expand ~ if present in base_path
   base_path="${base_path/#\~/$HOME}"
   
-  # If INSTALL_PATH is "~", install to ~/.claude, ~/.codex, ~/.cursor
-  if [ "${INSTALL_PATH}" = "~" ]; then
-    install_dirs+=("${base_path}/.claude/skills/${SKILL_NAME}")
-    install_dirs+=("${base_path}/.codex/skills/${SKILL_NAME}")
-    install_dirs+=("${base_path}/.cursor/skills/${SKILL_NAME}")
-  # If INSTALL_PATH is ".", install to ./claude, ./codex, ./cursor (without dot)
-  elif [ "${INSTALL_PATH}" = "." ]; then
-    install_dirs+=("${base_path}/claude/skills/${SKILL_NAME}")
-    install_dirs+=("${base_path}/codex/skills/${SKILL_NAME}")
-    install_dirs+=("${base_path}/cursor/skills/${SKILL_NAME}")
+  # If INSTALL_PATH is "~" or ".", check for existing directories and install to them
+  if [ "${INSTALL_PATH}" = "~" ] || [ "${INSTALL_PATH}" = "." ]; then
+    # Check for .claude directory
+    if [ -d "${base_path}/.claude" ]; then
+      install_dirs+=("${base_path}/.claude/skills/${SKILL_NAME}")
+    fi
+    
+    # Check for .codex directory
+    if [ -d "${base_path}/.codex" ]; then
+      install_dirs+=("${base_path}/.codex/skills/${SKILL_NAME}")
+    fi
+    
+    # Check for .cursor directory
+    if [ -d "${base_path}/.cursor" ]; then
+      install_dirs+=("${base_path}/.cursor/skills/${SKILL_NAME}")
+    fi
   # If INSTALL_PATH is not specified, detect existing directories in current folder
   elif [ -z "${INSTALL_PATH}" ]; then
     # Check for .cursor directory in current folder
