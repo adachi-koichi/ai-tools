@@ -100,8 +100,13 @@ detect_install_dirs() {
     fi
   fi
   
-  # Return newline-separated list
-  printf '%s\n' "${install_dirs[@]}"
+  # Return newline-separated list (handle empty array case)
+  # Temporarily disable unset variable check to safely handle empty arrays
+  set +u
+  if [ ${#install_dirs[@]} -gt 0 ]; then
+    printf '%s\n' "${install_dirs[@]}"
+  fi
+  set -u
 }
 
 # Print functions
