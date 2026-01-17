@@ -1,7 +1,9 @@
 #!/bin/bash
 # Generic Skill Installation Script
-# Usage: curl -sSL https://raw.githubusercontent.com/adachi-koichi/ai-tools/main/skills/install.sh | bash -s <skill_name>
+# Usage: curl -sSL https://raw.githubusercontent.com/adachi-koichi/ai-tools/main/skills/install.sh | bash -s <skill_name> [install_path]
 # Example: curl -sSL https://raw.githubusercontent.com/adachi-koichi/ai-tools/main/skills/install.sh | bash -s miro
+# Example: curl -sSL https://raw.githubusercontent.com/adachi-koichi/ai-tools/main/skills/install.sh | bash -s miro ~
+# Example: curl -sSL https://raw.githubusercontent.com/adachi-koichi/ai-tools/main/skills/install.sh | bash -s miro .
 
 set -euo pipefail
 
@@ -16,12 +18,16 @@ REPO="adachi-koichi/ai-tools"
 BRANCH="main"
 GITHUB_RAW_BASE="https://raw.githubusercontent.com/${REPO}/${BRANCH}"
 
-# Get skill name from argument
+# Get skill name and install path from arguments
 SKILL_NAME="${1:-}"
+INSTALL_PATH="${2:-}"
+
 if [ -z "${SKILL_NAME}" ]; then
   echo -e "${RED}[ERROR]${NC} Skill name is required"
-  echo "Usage: curl -sSL https://raw.githubusercontent.com/${REPO}/${BRANCH}/skills/install.sh | bash -s <skill_name>"
+  echo "Usage: curl -sSL https://raw.githubusercontent.com/${REPO}/${BRANCH}/skills/install.sh | bash -s <skill_name> [install_path]"
   echo "Example: curl -sSL https://raw.githubusercontent.com/${REPO}/${BRANCH}/skills/install.sh | bash -s miro"
+  echo "Example: curl -sSL https://raw.githubusercontent.com/${REPO}/${BRANCH}/skills/install.sh | bash -s miro ~"
+  echo "Example: curl -sSL https://raw.githubusercontent.com/${REPO}/${BRANCH}/skills/install.sh | bash -s miro ."
   exit 1
 fi
 
@@ -29,25 +35,69 @@ SKILL_DIR="skills/${SKILL_NAME}"
 GITHUB_RAW_SKILL_BASE="${GITHUB_RAW_BASE}/${SKILL_DIR}"
 GITHUB_API_BASE="https://api.github.com/repos/${REPO}/contents/${SKILL_DIR}"
 
-# Detect installation directories in current folder
+# Detect installation directories
 # Returns newline-separated list of installation directories
 detect_install_dirs() {
   local install_dirs=()
-  local current_dir="${PWD}"
+  local base_path=""
   
-  # Check for .cursor directory in current folder
-  if [ -d "${current_dir}/.cursor" ]; then
-    install_dirs+=("${current_dir}/.cursor/skills/${SKILL_NAME}")
+  # Determine base path based on INSTALL_PATH argument
+  if [ -n "${INSTALL_PATH}" ]; then
+    if [ "${INSTALL_PATH}" = "~" ]; then
+      # Use home directory
+      base_path="${HOME}"
+    elif [ "${INSTALL_PATH}" = "." ]; then
+      # Use current directory
+      base_path="${PWD}"
+    else
+      # Use specified path as-is
+      base_path="${INSTALL_PATH}"
+    fi
+  else
+    # Default: use current directory
+    base_path="${PWD}"
   fi
   
-  # Check for .codex directory in current folder
-  if [ -d "${current_dir}/.codex" ]; then
-    install_dirs+=("${current_dir}/.codex/skills/${SKILL_NAME}")
-  fi
+  # Expand ~ if present in base_path
+  base_path="${base_path/#\~/$HOME}"
   
-  # Check for .claude directory in current folder
-  if [ -d "${current_dir}/.claude" ]; then
-    install_dirs+=("${current_dir}/.claude/skills/${SKILL_NAME}")
+  # If INSTALL_PATH is "~", install to ~/.claude, ~/.codex, ~/.cursor
+  if [ "${INSTALL_PATH}" = "~" ]; then
+    install_dirs+=("${base_path}/.claude/skills/${SKILL_NAME}")
+    install_dirs+=("${base_path}/.codex/skills/${SKILL_NAME}")
+    install_dirs+=("${base_path}/.cursor/skills/${SKILL_NAME}")
+  # If INSTALL_PATH is ".", install to ./claude, ./codex, ./cursor (without dot)
+  elif [ "${INSTALL_PATH}" = "." ]; then
+    install_dirs+=("${base_path}/claude/skills/${SKILL_NAME}")
+    install_dirs+=("${base_path}/codex/skills/${SKILL_NAME}")
+    install_dirs+=("${base_path}/cursor/skills/${SKILL_NAME}")
+  # If INSTALL_PATH is not specified, detect existing directories in current folder
+  elif [ -z "${INSTALL_PATH}" ]; then
+    # Check for .cursor directory in current folder
+    if [ -d "${base_path}/.cursor" ]; then
+      install_dirs+=("${base_path}/.cursor/skills/${SKILL_NAME}")
+    fi
+    
+    # Check for .codex directory in current folder
+    if [ -d "${base_path}/.codex" ]; then
+      install_dirs+=("${base_path}/.codex/skills/${SKILL_NAME}")
+    fi
+    
+    # Check for .claude directory in current folder
+    if [ -d "${base_path}/.claude" ]; then
+      install_dirs+=("${base_path}/.claude/skills/${SKILL_NAME}")
+    fi
+  else
+    # Custom path specified - try to detect or use default
+    if [ -d "${base_path}/.cursor" ]; then
+      install_dirs+=("${base_path}/.cursor/skills/${SKILL_NAME}")
+    fi
+    if [ -d "${base_path}/.codex" ]; then
+      install_dirs+=("${base_path}/.codex/skills/${SKILL_NAME}")
+    fi
+    if [ -d "${base_path}/.claude" ]; then
+      install_dirs+=("${base_path}/.claude/skills/${SKILL_NAME}")
+    fi
   fi
   
   # Return newline-separated list
@@ -233,6 +283,9 @@ main() {
   print_info "================================="
   print_info "Skill name: ${SKILL_NAME}"
   print_info "Current directory: ${PWD}"
+  if [ -n "${INSTALL_PATH}" ]; then
+    print_info "Install path: ${INSTALL_PATH}"
+  fi
   
   # Check dependencies
   check_dependencies
@@ -249,9 +302,19 @@ main() {
   
   # If no directories found, use fallback
   if [ ${#install_dirs_array[@]} -eq 0 ]; then
-    print_warn "No .claude, .codex, or .cursor directories found in current folder"
-    print_info "Creating ./skills/${SKILL_NAME} as fallback..."
-    install_dirs_array=("./skills/${SKILL_NAME}")
+    if [ "${INSTALL_PATH}" = "~" ]; then
+      print_warn "No .claude, .codex, or .cursor directories found in home directory"
+      print_info "Creating ~/.claude/skills/${SKILL_NAME} as fallback..."
+      install_dirs_array=("${HOME}/.claude/skills/${SKILL_NAME}")
+    elif [ "${INSTALL_PATH}" = "." ]; then
+      print_warn "No claude, codex, or cursor directories found in current folder"
+      print_info "Creating ./claude/skills/${SKILL_NAME} as fallback..."
+      install_dirs_array=("./claude/skills/${SKILL_NAME}")
+    else
+      print_warn "No .claude, .codex, or .cursor directories found in current folder"
+      print_info "Creating ./skills/${SKILL_NAME} as fallback..."
+      install_dirs_array=("./skills/${SKILL_NAME}")
+    fi
   fi
   
   # Count installation directories
