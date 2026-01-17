@@ -11,6 +11,21 @@ Miro REST APIを使用してボードを操作するスキルです。
 
 ## セットアップ
 
+### 0. インストール
+
+以下のコマンドでインストールできます：
+
+```bash
+# GitHubから直接インストール
+curl -sSL https://raw.githubusercontent.com/adachi-koichi/ai-tools/main/skills/miro/install.sh | bash
+```
+
+インストールスクリプトは自動的に以下を検出して適切な場所にインストールします：
+- `~/.cursor/skills/miro/` (Cursor使用時)
+- `~/.codex/skills/miro/` (Codex使用時)
+- `~/.claude/skills/miro/` (Claude使用時)
+- `./skills/miro/` (上記が見つからない場合)
+
 ### 1. アクセストークンの取得
 
 1. [Miro Developer Portal](https://miro.com/app/settings/user-profile/apps) でアプリを作成
