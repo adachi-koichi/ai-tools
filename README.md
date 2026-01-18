@@ -30,6 +30,9 @@ curl -sSL https://raw.githubusercontent.com/adachi-koichi/ai-tools/main/skills/i
 # change-terminal-titleスキルをホームディレクトリにインストール
 curl -sSL https://raw.githubusercontent.com/adachi-koichi/ai-tools/main/skills/install.sh | bash -s change-terminal-title ~
 
+# codexスキルをインストール（自動検出）
+curl -sSL https://raw.githubusercontent.com/adachi-koichi/ai-tools/main/skills/install.sh | bash -s codex
+
 # miroスキルをカレントディレクトリにインストール
 curl -sSL https://raw.githubusercontent.com/adachi-koichi/ai-tools/main/skills/install.sh | bash -s miro .
 ```
@@ -38,3 +41,4 @@ curl -sSL https://raw.githubusercontent.com/adachi-koichi/ai-tools/main/skills/i
 
 - `miro`: Miro APIを使用するスキル
 - `change-terminal-title`: ターミナルのタイトルを変更するスキル
+- `codex`: OpenAI Codex CLIを非インタラクティブモードで実行し、コード生成・編集・レビューなどのタスクを委譲するスキル
