@@ -42,3 +42,5 @@ curl -sSL https://raw.githubusercontent.com/adachi-koichi/ai-tools/main/skills/i
 - `miro`: Miro APIを使用するスキル
 - `change-terminal-title`: ターミナルのタイトルを変更するスキル
 - `codex`: OpenAI Codex CLIを非インタラクティブモードで実行し、コード生成・編集・レビューなどのタスクを委譲するスキル
+- `agent-conversation-logger`: Agentとユーザーの会話をSQLiteデータベースに保存・管理するスキル（メッセージ保存、セッション管理、検索、エクスポート機能）
+- `self-update`: 会話セッションを分析してagent、command、skill、ruleを作成・更新するスキル。会話から学習パターンを抽出し、Claude Codeの設定として永続化します
